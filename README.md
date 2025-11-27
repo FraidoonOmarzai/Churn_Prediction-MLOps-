@@ -310,16 +310,222 @@ artifacts/
 - Automated hyperparameter configuration
 - MLflow tracking for all experiments
 
-<!-- 
+---
 
-
-
-## API & UI (Phase 2)
-
+# API & UI (Phase 2)
+```
 ✅ FastAPI REST API
 ✅ Streamlit dashboard
 ✅ Real-time predictions
 ✅ Batch processing
+```
+
+
+Phase 2 adds **FastAPI REST API** and **Streamlit Dashboard** for real-time predictions and interactive visualizations.
+
+---
+
+## 📦 New Components Added
+
+### 1. **Prediction Pipeline** (`src/pipeline/prediction_pipeline.py`)
+- Loads trained models for inference
+- Handles single and batch predictions
+- Calculates risk levels
+- Feature importance extraction
+
+### 2. **FastAPI REST API** (`api/`)
+- RESTful endpoints for predictions
+- Request/response validation with Pydantic
+- Auto-generated API documentation
+- Health checks and monitoring
+
+### 3. **Streamlit Dashboard** (`streamlit_app/`)
+- Interactive web interface
+- Single customer prediction
+- Batch CSV upload
+- Visualizations and analytics
+
+---
+
+## 🚀 Quick Start
+
+### Step 1: Install New Dependencies
+```bash
+pip install --upgrade pip
+pip install fastapi uvicorn[standard] streamlit plotly python-multipart
+```
+
+Or install from updated requirements.txt:
+```bash
+pip install -r requirements.txt
+```
+
+### Step 2: Ensure Model is Trained
+```bash
+# If you haven't trained models yet
+python scripts/train.py
+```
+
+### Step 3: Start the FastAPI Server
+```bash
+python run_api.py
+```
+
+**API will be available at:**
+- Main API: http://localhost:8000
+- Interactive Docs: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+
+### Step 4: Start the Streamlit Dashboard (New Terminal)
+```bash
+python run_streamlit.py
+```
+
+**Dashboard will open at:** http://localhost:8501
+
+---
+
+## 📡 API Endpoints
+
+### **1. Health Check**
+```bash
+GET http://localhost:8000/health
+```
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "model_loaded": true,
+  "preprocessor_loaded": true,
+  "api_version": "1.0.0"
+}
+```
+
+### **2. Single Prediction**
+```bash
+POST http://localhost:8000/predict
+```
+
+**Request Body:**
+```json
+{
+  "customer": {
+    "gender": "Female",
+    "SeniorCitizen": 0,
+    "Partner": "Yes",
+    "Dependents": "No",
+    "tenure": 12,
+    "PhoneService": "Yes",
+    "MultipleLines": "No",
+    "InternetService": "Fiber optic",
+    "OnlineSecurity": "No",
+    "OnlineBackup": "Yes",
+    "DeviceProtection": "No",
+    "TechSupport": "No",
+    "StreamingTV": "Yes",
+    "StreamingMovies": "No",
+    "Contract": "Month-to-month",
+    "PaperlessBilling": "Yes",
+    "PaymentMethod": "Electronic check",
+    "MonthlyCharges": 70.35,
+    "TotalCharges": 840.50
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "prediction": "Yes",
+  "prediction_label": 1,
+  "churn_probability": 0.7245,
+  "no_churn_probability": 0.2755,
+  "confidence": 0.7245,
+  "risk_level": "High"
+}
+```
+
+### **3. Batch Prediction**
+```bash
+POST http://localhost:8000/predict/batch
+```
+
+**Request Body:**
+```json
+{
+  "customers": [
+    { /* customer 1 data */ },
+    { /* customer 2 data */ }
+  ]
+}
+```
+
+**Response:**
+```json
+{
+  "predictions": [ /* array of predictions */ ],
+  "total_customers": 2,
+  "high_risk_count": 1
+}
+```
+
+### **4. Model Information**
+```bash
+GET http://localhost:8000/model/info
+```
+
+### **5. Feature Importance**
+```bash
+GET http://localhost:8000/model/feature-importance
+```
+
+---
+
+## 🧪 Testing the API
+
+### Option 1: Interactive Docs (Recommended)
+1. Start API server: `python run_api.py`
+2. Open browser: http://localhost:8000/docs
+3. Try out endpoints directly in the browser
+
+### Option 2: Test Script
+```bash
+python test_api.py
+```
+
+### Option 3: cURL Commands
+```bash
+# Health check
+curl http://localhost:8000/health
+
+# Single prediction
+curl -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d @sample_request.json
+```
+
+### Option 4: Python Requests
+```python
+import requests
+
+response = requests.post(
+    "http://localhost:8000/predict",
+    json={"customer": {/* customer data */}}
+)
+print(response.json())
+```
+
+---
+
+
+
+
+<!-- 
+
+
+
+
 
 ## Containerization (Phase 3)
 
