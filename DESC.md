@@ -287,3 +287,156 @@ docker-compose exec api bash
 ---
 ---
 ---
+
+## 🔧 Test Configuration
+
+### **pytest.ini**
+```ini
+[pytest]
+markers =
+    unit: Unit tests
+    integration: Integration tests
+    data: Data quality tests
+    model: Model performance tests
+    api: API tests
+    slow: Slow tests
+addopts = -v --strict-markers --cov-fail-under=70
+```
+
+### **.coveragerc**
+```ini
+[run]
+source = src,api
+omit = */tests/*, */venv/*
+
+[report]
+precision = 2
+show_missing = True
+```
+
+---
+
+## 🧩 Test Fixtures
+
+Located in `tests/conftest.py`, available to all tests:
+
+### **Configuration Fixtures**
+- `test_config` - Test configuration
+- `temp_dir` - Temporary directory
+
+### **Data Fixtures**
+- `sample_customer_data` - Single customer dict
+- `sample_dataframe` - DataFrame with 5 customers
+- `sample_csv_file` - Temporary CSV file
+
+### **Model Fixtures**
+- `mock_model` - Trained model mock
+- `mock_preprocessor` - Preprocessor mock
+- `prediction_pipeline_mock` - Complete pipeline mock
+
+### **API Fixtures**
+- `api_client` - FastAPI test client
+
+### **Utility Fixtures**
+- `mock_logger` - Suppress log output
+- `mock_mlflow` - Mock MLflow tracking
+
+---
+
+## 🎨 Writing New Tests
+
+### **Example Unit Test**
+```python
+import pytest
+
+@pytest.mark.unit
+def test_my_function(sample_dataframe):
+    """Test my function works correctly."""
+    result = my_function(sample_dataframe)
+    assert result is not None
+    assert len(result) > 0
+```
+
+### **Example Integration Test**
+```python
+@pytest.mark.integration
+@pytest.mark.api
+def test_api_endpoint(api_client):
+    """Test API endpoint."""
+    response = api_client.get("/health")
+    assert response.status_code == 200
+```
+
+### **Example Parametrized Test**
+```python
+@pytest.mark.parametrize("input,expected", [
+    (0.1, 'Low'),
+    (0.5, 'High'),
+    (0.8, 'Critical'),
+])
+def test_risk_levels(input, expected):
+    """Test risk level calculation."""
+    assert calculate_risk(input) == expected
+```
+
+---
+
+## 🔍 Debugging Tests
+
+### **Run with Debug Info**
+```bash
+pytest -vv --tb=long
+```
+
+### **Show Print Statements**
+```bash
+pytest -s
+```
+
+### **Drop into Debugger on Failure**
+```bash
+pytest --pdb
+```
+
+### **Show Fixtures**
+```bash
+pytest --fixtures
+```
+
+### **Collect Tests Without Running**
+```bash
+pytest --collect-only
+```
+
+---
+
+## 🚀 CI/CD Integration
+
+### **GitHub Actions Example**
+```yaml
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.10
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      - name: Run tests
+        run: |
+          pytest --cov=src --cov=api --cov-report=xml
+      - name: Upload coverage
+        uses: codecov/codecov-action@v2
+```
+
+---
+---
+---
