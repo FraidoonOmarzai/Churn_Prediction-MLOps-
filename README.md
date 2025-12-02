@@ -1111,28 +1111,30 @@ pytest -n auto
 ```
 
 ---
-
-
-<!-- 
-
-## ![alt text](image-3.png)Testing (Phase 4)
-
-✅ Unit tests (70%+ coverage)
-✅ Integration tests
-✅ Data quality tests
-✅ Model performance tests
-✅ Automated test suite
-
-
-
+---
+---
 ## ![alt text](image-4.png)CI/CD (Phase 5)
-
+```
 ✅ GitHub Actions workflows
 ✅ Automated testing
 ✅ Docker builds & pushes
 ✅ Security scanning
 ✅ Code quality checks
 ✅ Deployment automation
+```
+
+
+
+
+
+
+
+<!-- 
+
+
+
+
+
 
 ## Cloud Deployment (Phase 6)
 
