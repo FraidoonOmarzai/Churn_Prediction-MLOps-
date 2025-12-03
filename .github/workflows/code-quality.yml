@@ -60,7 +60,7 @@ jobs:
 
       - name: Install linting tools
         run: |
-          pip install flake8 pylint mypy
+          pip install flake8 flake8-html pylint mypy
           pip install -r requirements.txt
 
       - name: Run Flake8

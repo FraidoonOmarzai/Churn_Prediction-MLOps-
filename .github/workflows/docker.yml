@@ -139,8 +139,8 @@ jobs:
 
       - name: Verify API image
         run: |
-          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/churn-prediction-api:latest
-          docker inspect ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/churn-prediction-api:latest
+          docker pull ${{ secrets.DOCKER_USERNAME }}/churn-prediction-api:latest
+          docker inspect ${{ secrets.DOCKER_USERNAME }}/churn-prediction-api:latest
 
       - name: Verify Streamlit image
         run: |
