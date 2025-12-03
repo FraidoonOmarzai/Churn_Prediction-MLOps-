@@ -127,7 +127,7 @@ jobs:
   verify-images:
     name: Verify Docker Images
     runs-on: ubuntu-latest
-    needs: build-and-push
+    needs: [build-api, build-streamlit, build-training]
     if: github.event_name != 'pull_request'
 
     steps:
