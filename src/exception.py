@@ -2,6 +2,13 @@ import sys
 
 
 def error_message_detail(error, error_detail: sys):
+    """Generate detailed error message with file name and line number.
+    Args:
+        error: Exception object
+        error_detail: sys module to extract exception info
+    Returns:
+        error_message: Detailed error message string
+    """
     _, _, exc_tb = error_detail.exc_info()
     file_name = exc_tb.tb_frame.f_code.co_filename
     error_message = "Error occurred python script name [{0}] line number [{1}] error message [{2}]".format(

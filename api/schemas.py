@@ -100,6 +100,10 @@ class CustomerFeatures(BaseModel):
         return v
 
     class Config:
+        """
+        Config for CustomerFeatures schema
+        """
+
         schema_extra = {
             "example": {
                 "gender": "Female",

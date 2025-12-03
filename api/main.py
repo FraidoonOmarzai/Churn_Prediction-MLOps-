@@ -76,6 +76,9 @@ app.add_middleware(
 # ---------- Middleware: processing time ----------
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):
+    """
+    Middleware to add X-Process-Time header to responses.
+    """
     start = time.time()
     response = await call_next(request)
     response.headers["X-Process-Time"] = f"{time.time() - start:.4f}"
@@ -85,6 +88,9 @@ async def add_process_time_header(request: Request, call_next):
 # ---------- Global exception handler ----------
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    """
+    Handle unhandled exceptions globally.
+    """
     logger.exception("Unhandled exception")
     return JSONResponse(
         status_code=500,
@@ -119,6 +125,9 @@ async def root() -> Dict[str, Any]:
 
 @app.get("/health", response_model=HealthResponse, tags=["Health"])
 async def health_check() -> HealthResponse:
+    """
+    Check the health of the API and model loading status.
+    """
     try:
         model_loaded = prediction_pipeline is not None and getattr(prediction_pipeline, "model", None) is not None
         preprocessor_loaded = (
@@ -187,6 +196,9 @@ async def predict_batch(request: BatchPredictionRequest) -> BatchPredictionRespo
 
 @app.get("/model/info", response_model=ModelInfo, tags=["Model"])
 async def get_model_info() -> ModelInfo:
+    """
+    Get information about the loaded model.
+    """
     ensure_pipeline_loaded()
 
     model_obj = prediction_pipeline.model
