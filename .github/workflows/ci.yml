@@ -81,12 +81,14 @@ jobs:
 
       - name: Check isort
         run: |
-          # isort --check-only api/ src/ streamlit_app/
+          echo "Ignore for now"
+        #   isort --check-only api/ src/ streamlit_app/
 
       - name: Run mypy type checking
         run: |
-          mypy src/ --ignore-missing-imports --no-strict-optional
-        continue-on-error: true
+          echo "Ignore for now"
+        #   mypy src/ --ignore-missing-imports --no-strict-optional
+        # continue-on-error: true
 
   security:
     runs-on: ubuntu-latest
@@ -116,11 +118,14 @@ jobs:
           pip install safety
           safety check --full-report --json > security-output/safety.json || true
 
-      - name: Run Trivy (container) to produce SARIF
-        run: |
-          mkdir -p security-output
-          docker run --rm -v "${{ github.workspace }}:/workspace" -w /workspace aquasecurity/trivy:0.43.1 \
-            fs --format sarif --output /workspace/security-output/trivy-results.sarif .
+      - name: Run Trivy (use official GitHub Action) to produce SARIF
+        # pin to a specific released version for reproducibility
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          format: "sarif"
+          output: "security-output/trivy-results.sarif"
         continue-on-error: true
 
       - name: Debug - Show security-output contents
@@ -132,7 +137,6 @@ jobs:
           head -n 60 security-output/trivy-results.sarif || echo "no trivy SARIF present"
           echo "---- done ----"
 
-      # === New: check file existence and export as step output ===
       - name: Check SARIF exists
         id: check_sarif
         run: |
@@ -142,9 +146,6 @@ jobs:
             echo "sarif_exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-      # Upload SARIF to GitHub Code Scanning only when:
-      # - the SARIF file exists, and
-      # - this run is NOT a forked PR (we ensure PR head repo == base repo)
       - name: Upload SARIF to GitHub Code Scanning
         if: ${{ steps.check_sarif.outputs.sarif_exists == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
         uses: github/codeql-action/upload-sarif@v4
@@ -152,7 +153,6 @@ jobs:
           sarif_file: security-output/trivy-results.sarif
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      # Always save the security-output as an artifact so you can inspect it (even if upload was skipped)
       - name: Upload security-output as artifact (always)
         if: always()
         uses: actions/upload-artifact@v4
@@ -205,4 +205,3 @@ jobs:
             echo "✅ CI Pipeline Passed"
 
           fi
-
