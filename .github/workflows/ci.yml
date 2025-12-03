@@ -119,7 +119,6 @@ jobs:
       - name: Run Trivy (container) to produce SARIF
         run: |
           mkdir -p security-output
-          # Run Trivy container and write SARIF into workspace folder
           docker run --rm -v "${{ github.workspace }}:/workspace" -w /workspace aquasecurity/trivy:0.43.1 \
             fs --format sarif --output /workspace/security-output/trivy-results.sarif .
         continue-on-error: true
@@ -133,20 +132,27 @@ jobs:
           head -n 60 security-output/trivy-results.sarif || echo "no trivy SARIF present"
           echo "---- done ----"
 
-      # Upload SARIF to GitHub Code Scanning ONLY when:
-      #  - the SARIF file exists, and
-      #  - this run is NOT a forked PR (we check that the PR head repo == the base repo)
+      # === New: check file existence and export as step output ===
+      - name: Check SARIF exists
+        id: check_sarif
+        run: |
+          if [ -f security-output/trivy-results.sarif ]; then
+            echo "sarif_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "sarif_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Upload SARIF to GitHub Code Scanning only when:
+      # - the SARIF file exists, and
+      # - this run is NOT a forked PR (we ensure PR head repo == base repo)
       - name: Upload SARIF to GitHub Code Scanning
-        if: |
-          always() &&
-          (exists('security-output/trivy-results.sarif')) &&
-          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        if: ${{ steps.check_sarif.outputs.sarif_exists == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: security-output/trivy-results.sarif
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      # If SARIF failed to upload or it doesn't exist, always save artifact so you can fetch it
+      # Always save the security-output as an artifact so you can inspect it (even if upload was skipped)
       - name: Upload security-output as artifact (always)
         if: always()
         uses: actions/upload-artifact@v4
@@ -199,3 +205,4 @@ jobs:
             echo "✅ CI Pipeline Passed"
 
           fi
+
