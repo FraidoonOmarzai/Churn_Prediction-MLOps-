@@ -144,13 +144,13 @@ jobs:
 
       - name: Verify Streamlit image
         run: |
-          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/churn-prediction-streamlit:latest
-          docker inspect ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/churn-prediction-streamlit:latest
+          docker pull ${{ secrets.DOCKER_USERNAME }}/churn-prediction-streamlit:latest
+          docker inspect ${{ secrets.DOCKER_USERNAME }}/churn-prediction-streamlit:latest
 
       - name: Verify Training image
         run: |
-          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/churn-prediction-training:latest
-          docker inspect ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/churn-prediction-training:latest
+          docker pull ${{ secrets.DOCKER_USERNAME }}/churn-prediction-training:latest
+          docker inspect ${{ secrets.DOCKER_USERNAME }}/churn-prediction-training:latest
 
   cleanup:
     name: Cleanup Old Images
