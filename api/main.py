@@ -3,13 +3,17 @@ api/main.py
 Simplified FastAPI app for Customer Churn Prediction.
 """
 
-from typing import Any, Dict, Optional
 import os
 import sys
 import time
 from contextlib import asynccontextmanager
+from typing import Any, Dict, Optional
 
-# Import your pydantic schemas and pipeline
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
+# Import your pydantic schemas and pipeline (local imports after sys.path append)
 from api.schemas import (
     PredictionRequest,
     PredictionResponse,
@@ -18,15 +22,9 @@ from api.schemas import (
     HealthResponse,
     ModelInfo,
 )
-
 from src.pipeline.prediction_pipeline import PredictionPipeline
 from src.logger import logger
 from src.exception import CustomException
-
-
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 
 # ensure project root is importable (keep if you need local imports)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

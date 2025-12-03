@@ -2,9 +2,10 @@
 Pydantic Schemas for API Request/Response Validation
 """
 
-from pydantic import BaseModel, Field, field_validator, ValidationInfo
-from typing import List, Optional
 from enum import Enum
+from typing import List, Optional
+
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 
 class Gender(str, Enum):

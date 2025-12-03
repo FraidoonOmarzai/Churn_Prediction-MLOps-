@@ -89,7 +89,6 @@ jobs:
         continue-on-error: true
 
   security:
-      security:
     name: Security Scan
     runs-on: ubuntu-latest
 
@@ -181,4 +180,3 @@ jobs:
             echo "✅ CI Pipeline Passed"
 
           fi
-
