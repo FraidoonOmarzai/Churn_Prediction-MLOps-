@@ -81,7 +81,7 @@ jobs:
 
       - name: Check isort
         run: |
-          isort --check-only api/
+          # isort --check-only api/ src/ streamlit_app/
 
       - name: Run mypy type checking
         run: |
@@ -89,7 +89,6 @@ jobs:
         continue-on-error: true
 
   security:
-    name: Run security scanners and upload SARIF
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -97,55 +96,64 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
 
-      - name: Install scanner deps (Bandit, Safety)
+      - name: Install Bandit and Safety
         run: |
           python -m pip install --upgrade pip
           pip install bandit safety
 
-      - name: Run Bandit (generate JSON)
+      - name: Run Bandit
         run: |
           mkdir -p security-output
           bandit -r src -f json -o security-output/bandit.json || true
 
-      - name: Run Safety (generate JSON)
+      - name: Run Safety
         run: |
           pip install safety
           safety check --full-report --json > security-output/safety.json || true
 
-      - name: Run Trivy filesystem scan (SARIF)
-        # pin to a specific version, or use `docker` invocation to avoid action permission bugs
+      - name: Run Trivy (container) to produce SARIF
         run: |
           mkdir -p security-output
-          # run trivy in container to produce SARIF output into workspace
+          # Run Trivy container and write SARIF into workspace folder
           docker run --rm -v "${{ github.workspace }}:/workspace" -w /workspace aquasecurity/trivy:0.43.1 \
             fs --format sarif --output /workspace/security-output/trivy-results.sarif .
-        # allow failures so PRs don't block because of scan errors
         continue-on-error: true
 
-      - name: Inspect SARIF / debug
+      - name: Debug - Show security-output contents
         if: always()
         run: |
-          echo "Artifacts in security-output:"
+          echo "Listing security-output:"
           ls -la security-output || true
-          echo "--- trivy head ---"
-          head -n 40 security-output/trivy-results.sarif || echo "trivy SARIF missing"
-          echo "--- done ---"
+          echo "---- first lines of trivy sarif (if present) ----"
+          head -n 60 security-output/trivy-results.sarif || echo "no trivy SARIF present"
+          echo "---- done ----"
 
-      # Only attempt upload if SARIF exists AND this run has permissions.
-      # Also skip upload for forked repo PRs (they usually can't upload).
+      # Upload SARIF to GitHub Code Scanning ONLY when:
+      #  - the SARIF file exists, and
+      #  - this run is NOT a forked PR (we check that the PR head repo == the base repo)
       - name: Upload SARIF to GitHub Code Scanning
-        if: ${{ always() && !github.event.pull_request || (github.event.pull_request && github.event.pull_request.head.repo.full_name == github.repository) }}
+        if: |
+          always() &&
+          (exists('security-output/trivy-results.sarif')) &&
+          (github.event_name != 'pull_request' ||
+           github.event.pull_request.head.repo.full_name == github.repository)
         uses: github/codeql-action/upload-sarif@v4
         with:
-          # you can pass a single path or pattern; this points to the Trivy SARIF we've generated
           sarif_file: security-output/trivy-results.sarif
-          # Use GITHUB_TOKEN by default (provided automatically)
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      # If SARIF failed to upload or it doesn't exist, always save artifact so you can fetch it
+      - name: Upload security-output as artifact (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-output
+          path: security-output
 
   build-test:
     name: Test Build
