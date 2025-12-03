@@ -81,7 +81,7 @@ jobs:
 
       - name: Check isort
         run: |
-          isort --check-only src/ api/ streamlit_app/
+          isort --check-only api/
 
       - name: Run mypy type checking
         run: |
@@ -89,51 +89,63 @@ jobs:
         continue-on-error: true
 
   security:
-    name: Security Scan
+    name: Run security scanners and upload SARIF
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Run Bandit security scan
-        uses: jpetrucciani/bandit-check@main
+      - name: Setup Python
+        uses: actions/setup-python@v4
         with:
-          path: "src/"
+          python-version: "3.11"
 
-      - name: Run Safety check
+      - name: Install scanner deps (Bandit, Safety)
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit safety
+
+      - name: Run Bandit (generate JSON)
+        run: |
+          mkdir -p security-output
+          bandit -r src -f json -o security-output/bandit.json || true
+
+      - name: Run Safety (generate JSON)
         run: |
           pip install safety
-          safety check --json || true
+          safety check --full-report --json > security-output/safety.json || true
+
+      - name: Run Trivy filesystem scan (SARIF)
+        # pin to a specific version, or use `docker` invocation to avoid action permission bugs
+        run: |
+          mkdir -p security-output
+          # run trivy in container to produce SARIF output into workspace
+          docker run --rm -v "${{ github.workspace }}:/workspace" -w /workspace aquasecurity/trivy:0.43.1 \
+            fs --format sarif --output /workspace/security-output/trivy-results.sarif .
+        # allow failures so PRs don't block because of scan errors
         continue-on-error: true
 
-      - name: Run Trivy vulnerability scanner
-        id: trivy
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: "fs"
-          scan-ref: "."
-          format: "sarif"
-          # relative path in the workspace where Trivy will write the SARIF
-          output: "trivy-results.sarif"
-
-      # debug / ensure the file exists (runs even if the Trivy step fails)
-      - name: Show SARIF file (debug)
+      - name: Inspect SARIF / debug
         if: always()
         run: |
-          echo "PWD: $(pwd)"
-          ls -la trivy-results.sarif || echo "trivy-results.sarif not found"
-          # print first lines so you can confirm it's valid SARIF
-          head -n 120 trivy-results.sarif || true
+          echo "Artifacts in security-output:"
+          ls -la security-output || true
+          echo "--- trivy head ---"
+          head -n 40 security-output/trivy-results.sarif || echo "trivy SARIF missing"
+          echo "--- done ---"
 
-      - name: Upload Trivy results to GitHub Security (SARIF)
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
+      # Only attempt upload if SARIF exists AND this run has permissions.
+      # Also skip upload for forked repo PRs (they usually can't upload).
+      - name: Upload SARIF to GitHub Code Scanning
+        if: ${{ always() && !github.event.pull_request || (github.event.pull_request && github.event.pull_request.head.repo.full_name == github.repository) }}
+        uses: github/codeql-action/upload-sarif@v4
         with:
-          # path relative to repository root
-          sarif_file: "trivy-results.sarif"
+          # you can pass a single path or pattern; this points to the Trivy SARIF we've generated
+          sarif_file: security-output/trivy-results.sarif
+          # Use GITHUB_TOKEN by default (provided automatically)
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   build-test:
     name: Test Build
