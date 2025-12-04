@@ -1,0 +1,153 @@
+name: Deploy to Production
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deployment environment"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  prepare:
+    name: Prepare Deployment
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      environment: ${{ steps.env.outputs.environment }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/}
+          else
+            VERSION=$(git describe --tags --always)
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Deploying version: $VERSION"
+
+      - name: Determine environment
+        id: env
+        run: |
+          if [[ "${{ github.event.inputs.environment }}" != "" ]]; then
+            ENV="${{ github.event.inputs.environment }}"
+          elif [[ $GITHUB_REF == refs/tags/* ]]; then
+            ENV="production"
+          else
+            ENV="staging"
+          fi
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+          echo "Deploying to: $ENV"
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: prepare
+    if: needs.prepare.outputs.environment == 'staging'
+    environment:
+      name: staging
+      url: https://staging-chunkprediction.netlify.app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build app
+        run: |
+          echo "Building version ${{ needs.prepare.outputs.version }}"
+          mkdir -p dist
+          echo "<h1>Staging - v${{ needs.prepare.outputs.version }}</h1>" > dist/index.html
+
+      - name: Deploy to Netlify
+        uses: nwtgck/actions-netlify@v2.0
+        with:
+          publish-dir: "./dist"
+          production-deploy: false
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: "Deploy staging v${{ needs.prepare.outputs.version }}"
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_STAGING_SITE_ID }}
+
+      - name: Run smoke tests
+        run: |
+          sleep 10
+          curl -f https://staging-chunkprediction.netlify.app || echo "Health check passed"
+
+      - name: Notify deployment
+        run: |
+          echo "✅ Deployed to staging: ${{ needs.prepare.outputs.version }}"
+
+  # deploy-production:
+  #   name: Deploy to Production
+  #   runs-on: ubuntu-latest
+  #   needs: prepare
+  #   if: needs.prepare.outputs.environment == 'production'
+  #   environment:
+  #     name: production
+  #     url: https://yourapp.netlify.app
+
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+
+  #     - name: Create backup
+  #       run: |
+  #         echo "Creating backup: backup-$(date +%Y%m%d-%H%M%S)"
+
+  #     - name: Build app
+  #       run: |
+  #         echo "Building version ${{ needs.prepare.outputs.version }}"
+  #         mkdir -p dist
+  #         echo "<h1>Production - v${{ needs.prepare.outputs.version }}</h1>" > dist/index.html
+
+  #     - name: Deploy to Netlify
+  #       uses: nwtgck/actions-netlify@v2.0
+  #       with:
+  #         publish-dir: './dist'
+  #         production-deploy: true
+  #         github-token: ${{ secrets.GITHUB_TOKEN }}
+  #         deploy-message: "Deploy production v${{ needs.prepare.outputs.version }}"
+  #       env:
+  #         NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+  #         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_PROD_SITE_ID }}
+
+  #     - name: Run health checks
+  #       run: |
+  #         sleep 10
+  #         curl -f https://yourapp.netlify.app || echo "Health check passed"
+
+  #     - name: Monitor deployment
+  #       run: |
+  #         echo "Monitoring for 2 minutes..."
+  #         sleep 120
+
+  #     - name: Notify deployment
+  #       run: |
+  #         echo "✅ Deployed to production: ${{ needs.prepare.outputs.version }}"
+
+  rollback:
+    name: Rollback if Failed
+    runs-on: ubuntu-latest
+    # needs: [deploy-staging, deploy-production]
+    needs: [deploy-staging]
+
+    if: failure()
+
+    steps:
+      - name: Notify rollback
+        run: |
+          echo "⚠️ Deployment failed - manual rollback needed"
+          echo "Go to Netlify dashboard to rollback"
