@@ -16,7 +16,7 @@ on:
           - production
 
 env:
-  AWS_REGION: ue-west-1
+  AWS_REGION: eu-west-1
   EKS_CLUSTER_NAME: churn-prediction-cluster
 
 jobs:
