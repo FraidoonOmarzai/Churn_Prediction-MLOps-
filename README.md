@@ -1535,12 +1535,13 @@ https://github.com/FraidoonOmarzai/Chunk_Prediction-MLOps-/actions
 
 Add to README.md:
 
+![CI](https://github.com/FraidoonOmarzai/Chunk_Prediction-MLOps-/workflows/CI%20Pipeline/badge.svg)
 
-![CI](https://github.com/youruser/yourrepo/workflows/CI%20Pipeline/badge.svg)
-![Docker](https://github.com/youruser/yourrepo/workflows/Docker%20Build%20%26%20Push/badge.svg)
-![Security](https://github.com/youruser/yourrepo/workflows/Security%20Scanning/badge.svg)
-[![codecov](https://codecov.io/gh/youruser/yourrepo/branch/main/graph/badge.svg)](https://codecov.io/gh/youruser/yourrepo)
+![Docker](https://github.com/FraidoonOmarzai/Chunk_Prediction-MLOps-/workflows/Docker%20Build%20and%20Push/badge.svg)
 
+![Security](https://github.com/FraidoonOmarzai/Chunk_Prediction-MLOps-/workflows/Security%20Scanning/badge.svg)
+
+[![codecov](https://codecov.io/gh/FraidoonOmarzai/Chunk_Prediction-MLOps-/branch/main/graph/badge.svg)](https://codecov.io/gh/FraidoonOmarzai/Chunk_Prediction-MLOps-)
 
 ---
 
