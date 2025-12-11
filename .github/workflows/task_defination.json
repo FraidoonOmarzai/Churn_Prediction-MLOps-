@@ -1,0 +1,41 @@
+{
+    "family": "churn-prediction-task-defination",
+    "networkMode": "awsvpc",
+    "executionRoleArn": "arn:aws:iam::642902937696:role/ecsTaskExecutionRole",
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "256",
+    "memory": "512",
+    "containerDefinitions": [
+        {
+            "name": "churn-prediction",
+            "image": "642902937696.dkr.ecr.us-east-1.amazonaws.com/churn-prediction",
+            "essential": true,
+            "portMappings": [
+                {
+                    "containerPort": 8080,
+                    "hostPort": 8080,
+                    "protocol": "tcp",
+                    "name": "churn-prediction-8080-tcp",
+                    "appProtocol": "http"
+                }
+            ],
+            "environment": [
+                {
+                    "name": "ENV",
+                    "value": "production"
+                }
+            ],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/churn-prediction",
+                    "awslogs-region": "us-east-1",
+                    "awslogs-stream-prefix": "ecs",
+                    "awslogs-create-group": "true"
+                }
+            }
+        }
+    ]
+}
