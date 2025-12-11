@@ -1,13 +1,10 @@
 name: CD to ECS Fargate
+
 on:
-  workflow_run:
-    # workflows: ["CI Pipeline"] # Must match the "name" field in ci.yml
+  push:
     branches:
       - main
-      - DeployOnAWS
-    types:
-      - completed
-  workflow_call:
+
 env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY: churn-prediction
