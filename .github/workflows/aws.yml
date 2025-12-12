@@ -11,7 +11,7 @@ env:
   ECS_SERVICE: churn-prediciton-service1
   ECS_CLUSTER: churn-prediction1
   ECS_TASK_DEFINITION: task-definition1.json
-  CONTAINER_NAME: churn-prediction1
+  CONTAINER_NAME: chrun-prediction1
 
 jobs:
   deploy:
@@ -43,7 +43,7 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker tag fraidoonjan/churn-prediction-api:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker fraidoonjan/churn-prediction-api:latest $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker tag fraidoonjan/churn-prediction-api:latest $ECR_REGISTRY/$ECR_REPOSITORY:latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
