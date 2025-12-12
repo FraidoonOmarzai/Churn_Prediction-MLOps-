@@ -468,11 +468,284 @@ jobs:
 
 ---
 
+---
 
----------------------
-<h1 align=center>Deploy to AWS</h1>
----------------------
+## <h1 align=center>Deploy to AWS</h1>
+
+`Guide you through deploying a Docker image from Docker Hub to AWS ECS using ECR, Fargate, and GitHub Actions.`
+
+## The process involves:
+
+- Setting up AWS infrastructure (ECR, ECS cluster, task definition, service)
+- Configuring AWS credentials in GitHub
+- Creating a GitHub Actions workflow to automate deployment
+
+### Step 1: Set up AWS ECR Repository
+
+- First, create an ECR repository to store your Docker images:
 
 ```bash
+aws ecr create-repository --repository-name your-app-name --region us-east-1
+```
+
+`Note` the repository URI (you'll need this later): <account-id>.dkr.ecr.us-east-1.amazonaws.com/your-app-name
+
+### Step 2: Create ECS Cluster
+
+- Create an ECS cluster that will run your containers:
+
+```bash
+aws ecs create-cluster --cluster-name your-cluster-name --region us-east-1
+```
+
+### Step 3: Create Task Execution Role
+
+- Create an IAM role for ECS task execution:
+
+```
+Go to IAM Console → Roles → Create Role
+Select "Elastic Container Service" → "Elastic Container Service Task"
+Attach the policy: AmazonECSTaskExecutionRolePolicy
+Name it: ecsTaskExecutionRole
+```
+
+`Note` the role ARN for later use.
+
+### Step 4: Create ECS Task Definition
+
+- Create a file task-definition.json:
+
+```json
+{
+  "family": "your-app-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "arn:aws:iam::<account-id>:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "your-app-container",
+      "image": "<account-id>.dkr.ecr.us-east-1.amazonaws.com/your-app-name:latest",
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/your-app-task",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}
+```
+
+- Create CloudWatch log group:
+
+```bash
+aws logs create-log-group --log-group-name /ecs/your-app-task --region us-east-1
+```
+
+- Register the task definition:
+
+```bash
+aws ecs register-task-definition --cli-input-json file://task-definition.json
+```
+
+```bash
+# In My PC
 aws ecs register-task-definition --cli-input-json file://C:\Users\44787\Desktop\Chunk_Prediction-MLOps-\.github\workflows\task_defination1.json
 ```
+
+### Step 5: Create ECS Service
+
+- First, you'll need a VPC with subnets and a security group. If you don't have them:
+
+```bash
+# Get your default VPC and subnets
+aws ec2 describe-vpcs --filters "Name=isDefault,Values=true"
+aws ec2 describe-subnets --filters "Name=vpc-id,Values=<your-vpc-id>" # i created on aws
+
+# Create security group
+aws ec2 create-security-group \
+  --group-name ecs-service-sg \
+  --description "Security group for ECS service" \
+  --vpc-id <your-vpc-id>
+
+# Allow inbound traffic on port 80
+aws ec2 authorize-security-group-ingress \
+  --group-id <security-group-id> \
+  --protocol tcp \
+  --port 8000 \
+  --cidr 0.0.0.0/0
+```
+
+- Create the ECS service:
+
+```bash
+aws ecs create-service \
+  --cluster your-cluster-name \
+  --service-name your-service-name \
+  --task-definition your-app-task \
+  --desired-count 1 \
+  --launch-type FARGATE \
+  --network-configuration "awsvpcConfiguration={subnets=[subnet-xxx,subnet-yyy],securityGroups=[sg-xxx],assignPublicIp=ENABLED}"
+```
+
+### Step 6: Configure AWS Credentials in GitHub
+
+- Create an IAM user with programmatic access
+- Attach these policies:
+
+```
+AmazonEC2ContainerRegistryPowerUser
+AmazonECS_FullAccess
+```
+
+- Save the Access Key ID and Secret Access Key
+
+- In your GitHub repository:
+
+```
+Go to Settings → Secrets and variables → Actions
+```
+
+- Add these secrets:
+
+```
+AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY
+```
+
+### Step 7: Create GitHub Actions Workflow
+
+- Create .github/workflows/deploy.yml:
+
+```yaml
+name: Deploy to AWS ECS
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: your-app-name
+  ECS_SERVICE: your-service-name
+  ECS_CLUSTER: your-cluster-name
+  ECS_TASK_DEFINITION: task-definition.json
+  CONTAINER_NAME: your-app-container
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Pull image from Docker Hub
+        run: |
+          docker pull your-dockerhub-username/your-image:latest
+
+      - name: Tag and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker tag your-dockerhub-username/your-image:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker tag your-dockerhub-username/your-image:latest $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Download task definition
+        run: |
+          aws ecs describe-task-definition --task-definition your-app-task --query taskDefinition > task-definition.json
+
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: ${{ env.ECS_TASK_DEFINITION }}
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+```
+
+### Step 8: Commit and Deploy
+
+- Add the task-definition.json file to your repository root
+- Update all placeholder values in the workflow file
+- Commit and push to the main branch
+
+```bash
+git add .github/workflows/deploy.yml task-definition.json
+git commit -m "Add ECS deployment workflow"
+git push origin main
+```
+
+#### Workflow Explanation
+
+The GitHub Actions workflow does the following:
+
+- Checks out your code
+- Configures AWS credentials
+- Logs into Amazon ECR
+- Pulls your image from Docker Hub
+- Tags and pushes it to ECR
+- Updates the ECS task definition with the new image
+- Deploys the updated task definition to your ECS service
+
+#### Verification
+
+- After deployment, check your service:
+
+```bash
+aws ecs describe-services --cluster your-cluster-name --services your-service-name
+```
+
+- Get the public IP of your running task:
+
+```bash
+aws ecs list-tasks --cluster your-cluster-name --service-name your-service-name
+aws ecs describe-tasks --cluster your-cluster-name --tasks <task-arn>
+```
+
+`Open the app:`
+
+```
+ECS cluster -> ECS services -> click on Tasks -> Click on Public ID -> add 8000 ---> the app will be running...
+```
+
+---
+
+---
+
+---

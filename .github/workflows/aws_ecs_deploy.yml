@@ -1,17 +1,15 @@
 name: Deploy to AWS ECS
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch: # allows you to run manually from GitHub UI
 
 env:
   AWS_REGION: us-east-1
-  ECR_REPOSITORY: churn-prediction1
-  ECS_SERVICE: churn-prediciton-service1
-  ECS_CLUSTER: churn-prediction1
-  ECS_TASK_DEFINITION: .github/workflows/task_defination1.json
-  CONTAINER_NAME: churn-prediction1
+  ECR_REPOSITORY: churn-prediction-repository
+  ECS_SERVICE: churn-prediciton-service
+  ECS_CLUSTER: churn-prediction-cluster
+  ECS_TASK_DEFINITION: .github/workflows/task_defination.json
+  CONTAINER_NAME: churn-prediction-container
 
 jobs:
   deploy:
@@ -46,10 +44,6 @@ jobs:
           docker tag fraidoonjan/churn-prediction-api:latest $ECR_REGISTRY/$ECR_REPOSITORY:latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-
-      # - name: Download task definition
-      #   run: |
-      #     aws ecs describe-task-definition --task-definition your-app-task --query taskDefinition > task-definition.json
 
       - name: Fill in the new image ID in the Amazon ECS task definition
         id: task-def

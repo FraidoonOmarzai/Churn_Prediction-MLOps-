@@ -1433,93 +1433,17 @@ https://github.com/youruser/yourrepo/actions
 
 ---
 
-### **5. Deployment** (`deploy.yml`)
+### **5. Deployment** (`aws_ecs_deploy.yml`)
 
-**Environments:**
+`Deploying a Docker image from Docker Hub to AWS ECS using ECR, Fargate, and GitHub Actions.`
 
-- **Staging** - Automatic on tags
-- **Production** - Manual approval required
+## The process involves:
 
-**Strategy:**
+- Setting up AWS infrastructure (ECR, ECS cluster, task definition, service)
+- Configuring AWS credentials in GitHub
+- Creating a GitHub Actions workflow to automate deployment
 
-- Blue-Green deployment
-- Health checks
-- Automatic rollback on failure
-
-**Process:**
-
-1. Configure AWS credentials
-2. Update kubeconfig
-3. Deploy green environment
-4. Run health checks
-5. Switch traffic
-6. Monitor
-7. Scale down blue
-
-**Trigger:**
-
-```bash
-# Tag for production deploy
-git tag v1.0.0
-git push origin v1.0.0
-
-# Manual deploy to staging
-# Go to Actions → Deploy → Run workflow
-```
-
----
-
-## 🛠️ Local Development
-
-### **Pre-commit Hooks**
-
-Install hooks:
-
-```bash
-pip install pre-commit
-pre-commit install
-```
-
-Run manually:
-
-```bash
-# Run on all files
-pre-commit run --all-files
-
-# Run specific hook
-pre-commit run black --all-files
-pre-commit run flake8 --all-files
-```
-
-### **Code Formatting**
-
-```bash
-# Format with Black
-black src/ api/ streamlit_app/
-
-# Sort imports
-isort src/ api/ streamlit_app/
-
-# Lint with Flake8
-flake8 src/ api/
-
-# Type check
-mypy src/ api/
-```
-
-### **Run Tests Locally**
-
-```bash
-# All tests
-pytest
-
-# With coverage
-pytest --cov=src --cov=api --cov-report=html
-
-# Specific category
-pytest -m unit
-pytest -m integration
-```
+`Note:` The process is clearly explanied on `DESC.md`
 
 ---
 
