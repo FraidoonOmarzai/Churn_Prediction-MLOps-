@@ -467,3 +467,12 @@ jobs:
 ---
 
 ---
+
+
+---------------------
+<h1 align=center>Deploy to AWS</h1>
+---------------------
+
+```bash
+aws ecs register-task-definition --cli-input-json file://C:\Users\44787\Desktop\Chunk_Prediction-MLOps-\.github\workflows\task_defination1.json
+```

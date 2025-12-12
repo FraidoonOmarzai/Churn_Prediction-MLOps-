@@ -14,10 +14,10 @@
             "essential": true,
             "portMappings": [
                 {
-                    "containerPort": 8080,
-                    "hostPort": 8080,
+                    "containerPort": 8000,
+                    "hostPort": 8000,
                     "protocol": "tcp",
-                    "name": "churn-prediction-8080-tcp",
+                    "name": "churn-prediction-8000-tcp",
                     "appProtocol": "http"
                 }
             ],
