@@ -11,7 +11,7 @@ env:
   ECS_SERVICE: churn-prediciton-service1
   ECS_CLUSTER: churn-prediction1
   ECS_TASK_DEFINITION: .github/workflows/task_defination1.json
-  CONTAINER_NAME: chrun-prediction1
+  CONTAINER_NAME: churn-prediction1
 
 jobs:
   deploy:
