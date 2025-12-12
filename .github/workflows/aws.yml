@@ -11,7 +11,7 @@ env:
   ECS_SERVICE: churn-prediciton-service1
   ECS_CLUSTER: churn-prediction1
   ECS_TASK_DEFINITION: task-definition1.json
-  CONTAINER_NAME: fraidoonjan/churn-prediction-api
+  CONTAINER_NAME: churn-prediction1
 
 jobs:
   deploy:
@@ -35,15 +35,15 @@ jobs:
 
       - name: Pull image from Docker Hub
         run: |
-          docker pull your-dockerhub-username/your-image:latest
+          docker pull fraidoonjan/churn-prediction-api:latest
 
       - name: Tag and push image to Amazon ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker tag your-dockerhub-username/your-image:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker tag your-dockerhub-username/your-image:latest $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker tag fraidoonjan/churn-prediction-api:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker fraidoonjan/churn-prediction-api:latest $ECR_REGISTRY/$ECR_REPOSITORY:latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
