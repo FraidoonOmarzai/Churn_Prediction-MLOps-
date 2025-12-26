@@ -1,0 +1,173 @@
+name: Deploy Docker Hub Images to EKS
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  workflow_dispatch: # Allows manual trigger
+
+env:
+  AWS_REGION: us-east-1
+  EKS_CLUSTER_NAME: churn-prediction
+  DOCKER_HUB_USERNAME: fraidoonjan
+
+jobs:
+  deploy-to-eks:
+    name: Deploy to EKS from Docker Hub
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: "v1.28.0"
+
+      - name: Update kubeconfig for EKS
+        run: |
+          aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
+          kubectl version --client
+          kubectl cluster-info
+
+      - name: Verify cluster access
+        run: |
+          kubectl get nodes
+          kubectl get namespaces
+
+      - name: Create namespace if not exists
+        run: |
+          kubectl apply -f k8s/namespace.yaml || true
+
+      - name: Create Docker Hub secret (if using private images)
+        run: |
+          kubectl create secret docker-registry dockerhub-secret \
+            --docker-server=https://index.docker.io/v1/ \
+            --docker-username=${{ secrets.DOCKER_USERNAME }} \
+            --docker-password=${{ secrets.DOCKER_PASSWORD }} \
+            --namespace=churn-prediction \
+            --dry-run=client -o yaml | kubectl apply -f -
+        continue-on-error: true
+
+      - name: Deploy API service
+        run: |
+          echo "Deploying API..."
+          kubectl apply -f k8s/api.yaml
+
+      # - name: Deploy Streamlit service
+      #   run: |
+      #     echo "Deploying Streamlit..."
+      #     kubectl apply -f k8s/streamlit.yaml
+
+      - name: Restart deployments to pull latest images
+        run: |
+          echo "Restarting deployments to ensure latest images..."
+          kubectl rollout restart deployment/api -n churn-prediction
+          # kubectl rollout restart deployment/streamlit -n churn-prediction
+
+      - name: Wait for API deployment
+        run: |
+          echo "Waiting for API deployment..."
+          kubectl rollout status deployment/api -n churn-prediction --timeout=5m
+
+      # - name: Wait for Streamlit deployment
+      #   run: |
+      #     echo "Waiting for Streamlit deployment..."
+      #     kubectl rollout status deployment/streamlit -n churn-prediction --timeout=5m
+
+      - name: Check deployment status
+        run: |
+          echo "=== PODS ==="
+          kubectl get pods -n churn-prediction -o wide
+
+          echo -e "\n=== SERVICES ==="
+          kubectl get svc -n churn-prediction
+
+          echo -e "\n=== DEPLOYMENTS ==="
+          kubectl get deployments -n churn-prediction
+
+      - name: Get LoadBalancer URLs
+        id: get-urls
+        run: |
+          echo "Waiting for LoadBalancers to be provisioned..."
+          sleep 45
+
+          # Get API LoadBalancer URL
+          API_LB=$(kubectl get svc api-service -n churn-prediction -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "pending")
+          # STREAMLIT_LB=$(kubectl get svc streamlit-service -n churn-prediction -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || echo "pending")
+
+          echo "api_url=$API_LB" >> $GITHUB_OUTPUT
+          # echo "streamlit_url=$STREAMLIT_LB" >> $GITHUB_OUTPUT
+
+          echo "API LoadBalancer: $API_LB"
+          # echo "Streamlit LoadBalancer: $STREAMLIT_LB"
+
+      - name: Create deployment summary
+        run: |
+          echo "# 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📦 Deployed Images" >> $GITHUB_STEP_SUMMARY
+          echo "- **API**: ${{ env.DOCKER_USERNAME }}/churn-prediction-api:latest" >> $GITHUB_STEP_SUMMARY
+          # echo "- **Streamlit**: ${{ env.DOCKER_USERNAME }}/churn-prediction-streamlit:latest" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🌐 Access URLs" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.get-urls.outputs.api_url }}" != "pending" ]; then
+            echo "- **API**: http://${{ steps.get-urls.outputs.api_url }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **API Health**: http://${{ steps.get-urls.outputs.api_url }}/health" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **API**: ⏳ LoadBalancer provisioning (check in a few minutes)" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # if [ "${{ steps.get-urls.outputs.streamlit_url }}" != "pending" ]; then
+          #   echo "- **Streamlit**: http://${{ steps.get-urls.outputs.streamlit_url }}" >> $GITHUB_STEP_SUMMARY
+          # else
+          #   echo "- **Streamlit**: ⏳ LoadBalancer provisioning (check in a few minutes)" >> $GITHUB_STEP_SUMMARY
+          # fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Deployment Status" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          kubectl get pods -n churn-prediction >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Test API endpoint
+        run: |
+          API_URL="${{ steps.get-urls.outputs.api_url }}"
+          if [ "$API_URL" != "pending" ]; then
+            echo "Testing API health endpoint..."
+            for i in {1..10}; do
+              if curl -f -s "http://$API_URL/health" > /dev/null 2>&1; then
+                echo "✅ API is healthy!"
+                curl "http://$API_URL/health"
+                break
+              else
+                echo "Attempt $i: API not ready yet, waiting 10s..."
+                sleep 10
+              fi
+            done
+          else
+            echo "⏳ LoadBalancer URL not available yet"
+          fi
+        continue-on-error: true
+
+      - name: Show logs on failure
+        if: failure()
+        run: |
+          echo "=== API LOGS ==="
+          kubectl logs -n churn-prediction -l app=api --tail=100 || true
+
+          # echo -e "\n=== STREAMLIT LOGS ==="
+          # kubectl logs -n churn-prediction -l app=streamlit --tail=100 || true
+
+          echo -e "\n=== EVENTS ==="
+          kubectl get events -n churn-prediction --sort-by='.lastTimestamp' || true
