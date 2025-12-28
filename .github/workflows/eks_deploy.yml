@@ -68,21 +68,38 @@ jobs:
       #     echo "Deploying Streamlit..."
       #     kubectl apply -f k8s/streamlit.yaml
 
-      - name: Restart deployments to pull latest images
-        run: |
-          echo "Restarting deployments to ensure latest images..."
-          kubectl rollout restart deployment/api -n churn-prediction
-          # kubectl rollout restart deployment/streamlit -n churn-prediction
+      # - name: Restart deployments to pull latest images
+      #   run: |
+      #     echo "Restarting deployments to ensure latest images..."
+      #     kubectl rollout restart deployment/api -n churn-prediction
+      #     # kubectl rollout restart deployment/streamlit -n churn-prediction
 
-      - name: Wait for API deployment
-        run: |
-          echo "Waiting for API deployment..."
-          kubectl rollout status deployment/api -n churn-prediction --timeout=5m
+      # - name: Wait for API deployment
+      #   run: |
+      #     echo "Waiting for API deployment..."
+      #     kubectl rollout status deployment/api -n churn-prediction --timeout=5m
 
       # - name: Wait for Streamlit deployment
       #   run: |
       #     echo "Waiting for Streamlit deployment..."
       #     kubectl rollout status deployment/streamlit -n churn-prediction --timeout=5m
+
+      - name: Restart deployments to pull latest images
+        run: |
+          echo "Restarting deployments to ensure latest images..."
+          # Delete the deployment and recreate it (cleaner than restart)
+          kubectl delete deployment api -n churn-prediction --ignore-not-found=true
+          # kubectl delete deployment streamlit -n churn-prediction --ignore-not-found=true
+
+      - name: Redeploy API service
+        run: |
+          echo "Deploying API..."
+          kubectl apply -f k8s/api.yaml
+      
+      - name: Wait for API deployment
+        run: |
+          echo "Waiting for API deployment..."
+          kubectl rollout status deployment/api -n churn-prediction --timeout=10m
 
       - name: Check deployment status
         run: |
@@ -171,3 +188,4 @@ jobs:
 
           echo -e "\n=== EVENTS ==="
           kubectl get events -n churn-prediction --sort-by='.lastTimestamp' || true
+
