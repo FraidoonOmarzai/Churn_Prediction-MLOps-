@@ -1,11 +1,7 @@
 name: Deploy Docker Hub Images to EKS
 
 on:
-  push:
-    branches:
-      - main
-      - develop
-  workflow_dispatch: # Allows manual trigger
+  workflow_dispatch: # allows you to run manually from GitHub UI
 
 env:
   AWS_REGION: us-east-1
@@ -95,7 +91,7 @@ jobs:
         run: |
           echo "Deploying API..."
           kubectl apply -f k8s/api.yaml
-      
+
       - name: Wait for API deployment
         run: |
           echo "Waiting for API deployment..."
@@ -188,4 +184,3 @@ jobs:
 
           echo -e "\n=== EVENTS ==="
           kubectl get events -n churn-prediction --sort-by='.lastTimestamp' || true
-

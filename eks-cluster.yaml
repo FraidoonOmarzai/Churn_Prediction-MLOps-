@@ -1,0 +1,34 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: churn-prediction-cluster
+  region: us-east-1 # Change to your preferred region
+
+# Use managed node groups for easier management
+managedNodeGroups:
+  - name: churn-prediction-nodes
+    instanceType: t3.medium # 2 vCPU, 4GB RAM - adjust based on needs
+    desiredCapacity: 2
+    minSize: 1
+    maxSize: 4
+    volumeSize: 20
+    ssh:
+      allow: false # Set to true if you need SSH access
+    labels:
+      role: worker
+    tags:
+      Environment: production
+      Project: churn-prediction
+    iam:
+      withAddonPolicies:
+        autoScaler: true
+        ebs: true
+        albIngress: true
+        cloudWatch: true
+
+# Enable CloudWatch logging
+cloudWatch:
+  clusterLogging:
+    enableTypes:
+      ["api", "audit", "authenticator", "controllerManager", "scheduler"]

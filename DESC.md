@@ -875,4 +875,86 @@ kubectl delete -f api.yaml
 kubectl apply -f api.yaml
 ```
 
-## Part 2: AWS Deployment with CI/CD
+## Part 2: AWS(EKS) Deployment with CI/CD
+🏗️ Architecture
+```
+┌─────────────────────────────────────────────────────┐
+│                    AWS EKS Cluster                  │
+│                                                     │
+│  ┌──────────────────────────────────────────────┐   │
+│  │         churn-prediction namespace           │   │
+│  │                                              │   │
+│  │  ┌────────────────┐    ┌─────────────────┐   │   │
+│  │  │  API Service   │    │ Streamlit App   │   │   │
+│  │  │  (2 replicas)  │◄───┤  (2 replicas)   │   │   │
+│  │  │                │    │                 │   │   │
+│  │  │  Port: 8000    │    │   Port: 8501    │   │   │
+│  │  └────────┬───────┘    └────────┬────────┘   │   │
+│  │           │                      │           │   │
+│  │  ┌────────▼───────┐    ┌────────▼────────┐   │   │
+│  │  │ LoadBalancer   │    │  LoadBalancer   │   │   │
+│  │  │  (AWS NLB)     │    │   (AWS NLB)     │   │   │
+│  │  └────────────────┘    └─────────────────┘   │   │
+│  └──────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────┘
+                       │
+            ┌──────────▼──────────┐
+            │   Docker Hub        │
+            │                     │
+            │  - API Image        │
+            │  - Streamlit Image  │
+            └─────────────────────┘
+```
+📦 Components
+API Service: FastAPI backend for churn prediction
+Streamlit App: Interactive web interface
+Docker Hub: Container image registry
+AWS EKS: Managed Kubernetes service
+GitHub Actions: CI/CD automation
+
+📁 Repository Structure
+```
+.
+├── .github/
+│   └── workflows/
+│       └── eks_deploy.yml      # GitHub Actions CI/CD pipeline
+├── k8s/
+│   ├── namespace.yaml          # Kubernetes namespace
+│   ├── api.yaml                # API deployment and service
+│   └── streamlit.yaml          # Streamlit deployment and service
+├── eks-cluster.yaml            # EKS cluster configuration
+├── k8s/
+│   ├── eks_deploy.sh           # Manual deployment script
+└── README.md                   # This file
+```
+#### AWS EKS Deployment
+##### Prerequisites
+ - AWS Account
+ - AWS CLI configured
+ - kubectl installed
+ - eksctl installed
+
+1. Create EKS Cluster
+```bash
+eksctl create cluster -f eks-cluster.yaml
+```
+2. Deploy Application
+- Option A: Using GitHub Actions (Automated)
+```bash
+#1. Fork this repository
+#2. Add GitHub Secrets (see Configuration section)
+#3. Push to main branch
+#4. GitHub Actions will automatically deploy
+```
+- Option B: Using Deploy Script (Manual)
+```bash
+chmod +x deploy.sh
+./deploy.sh
+```
+- Option C: Using kubectl (Manual)
+```bash
+aws eks update-kubeconfig --name churn-prediction-cluster --region us-east-1
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/api.yaml
+kubectl apply -f k8s/streamlit.yaml
+```
