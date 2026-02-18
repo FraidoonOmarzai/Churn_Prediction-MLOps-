@@ -2,6 +2,29 @@
 
 End-to-end MLOps project with Docker, Kubernetes, and AWS
 
+## 👨‍💻 For MLOps / ML Platform roles
+
+**What this is**: End‑to‑end churn prediction platform with a full MLOps lifecycle: data → training → evaluation → packaging → serving → CI/CD → Kubernetes on AWS EKS.
+
+**Why it matters**: Shows how I design, automate, and operate a production‑style ML system: reproducible pipelines, experiment tracking, observability hooks, containerization, and cloud deployment.
+
+**Tech highlights**:
+- ML pipeline (data ingestion/validation → preprocessing → multi‑model training & evaluation) with **MLflow** tracking
+- **FastAPI** + **Streamlit** services, packaged with **Docker** & **Docker Compose**
+- **Pytest** suite (unit, integration, data & model tests) + **GitHub Actions** CI/CD (tests, lint, Docker build, security)
+- **Kubernetes** manifests and **AWS EKS** deployment workflows (GitHub Actions + eksctl)
+
+## 🔧 My MLOps Responsibilities in This Project
+
+- **Pipeline design**: Designed the end‑to‑end training pipeline (data ingestion, validation, preprocessing, multi‑model training, evaluation, artifact management).
+- **Experiment tracking**: Integrated **MLflow** for experiment tracking and implemented model selection logic based on business‑driven metrics (recall, F1, ROC‑AUC).
+- **Production‑style serving**: Built **FastAPI** services (health, single/batch predict, model info, feature importance) and wired them to persisted artifacts.
+- **User‑facing monitoring**: Created a **Streamlit** dashboard for real‑time predictions, batch scoring, and basic analytics for business users.
+- **Containerization**: Wrote Dockerfiles for API, Streamlit, and training jobs, plus **docker‑compose** to orchestrate multi‑service local environments.
+- **Testing & quality**: Set up **pytest** structure (unit, integration, data quality, model tests), coverage config, and helper scripts for consistent local and CI runs.
+- **CI/CD**: Implemented **GitHub Actions** workflows for tests, linting, security scanners, Docker build & push, and deployment to AWS.
+- **Kubernetes & EKS**: Authored Kubernetes manifests (namespace, deployments, services) and EKS deployment workflows (eksctl + GitHub Actions) for cloud rollout.
+
 # 🚀 DEVELOPMENT PHASES:
 
 📊 What I'm Building: A production-ready, enterprise-grade MLOps platform with:
