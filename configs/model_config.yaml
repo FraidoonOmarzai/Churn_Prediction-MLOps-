@@ -31,7 +31,7 @@ xgboost:
   subsample: 0.8              # Subsample ratio of training instances
   colsample_bytree: 0.8       # Subsample ratio of columns
   random_state: 42            # Random seed for reproducibility
-  scale_pos_weight: 1         # Balancing of positive/negative weights
+  scale_pos_weight: 3         # Balancing of positive/negative weights (~73/27 class ratio)
   eval_metric: logloss        # Evaluation metric
   objective: binary:logistic  # Learning objective
   min_child_weight: 1         # Minimum sum of instance weight in child

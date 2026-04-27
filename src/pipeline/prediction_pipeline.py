@@ -3,6 +3,7 @@ Prediction Pipeline for Inference
 Handles loading models and making predictions on new data.
 """
 
+import json
 import sys
 import pandas as pd
 from typing import Dict, Any, List
@@ -22,6 +23,7 @@ class PredictionPipeline:
         model_path: str = "artifacts/models/xgboost.pkl",
         preprocessor_path: str = "artifacts/preprocessors/preprocessor.pkl",
         label_encoder_path: str = "artifacts/preprocessors/preprocessor_label_encoder.pkl",
+        threshold_path: str = "artifacts/metrics/best_threshold.json",
     ):
         """
         Initialize prediction pipeline.
@@ -30,34 +32,42 @@ class PredictionPipeline:
             model_path: Path to trained model
             preprocessor_path: Path to fitted preprocessor
             label_encoder_path: Path to label encoder
+            threshold_path: Path to JSON file with the tuned classification threshold
         """
         self.model_path = model_path
         self.preprocessor_path = preprocessor_path
         self.label_encoder_path = label_encoder_path
+        self.threshold_path = threshold_path
 
-        # Load model and preprocessor
         self.model = None
         self.preprocessor = None
         self.label_encoder = None
+        self.threshold = 0.35  # sensible default; overridden by saved artifact
 
         self._load_artifacts()
 
     def _load_artifacts(self):
-        """Load model, preprocessor, and label encoder."""
+        """Load model, preprocessor, label encoder, and classification threshold."""
         try:
             logger.info("Loading model and preprocessor for prediction")
 
-            # Load model
             self.model = load_object(self.model_path)
             logger.info(f"Model loaded from: {self.model_path}")
 
-            # Load preprocessor
             self.preprocessor = load_object(self.preprocessor_path)
             logger.info(f"Preprocessor loaded from: {self.preprocessor_path}")
 
-            # Load label encoder
             self.label_encoder = load_object(self.label_encoder_path)
             logger.info(f"Label encoder loaded from: {self.label_encoder_path}")
+
+            # Load tuned threshold (written by ModelEvaluation after training)
+            try:
+                with open(self.threshold_path) as f:
+                    threshold_data = json.load(f)
+                self.threshold = float(threshold_data.get("threshold", self.threshold))
+                logger.info(f"Classification threshold loaded: {self.threshold}")
+            except FileNotFoundError:
+                logger.info(f"Threshold file not found; using default threshold: {self.threshold}")
 
             logger.info("All artifacts loaded successfully")
 
@@ -146,15 +156,14 @@ class PredictionPipeline:
             features_transformed = self.preprocessor.transform(df)
             logger.info(f"Features transformed. Shape: {features_transformed.shape}")
 
-            # Make prediction
-            prediction_encoded = self.model.predict(features_transformed)[0]
+            # Get probabilities and apply tuned threshold
             prediction_proba = self.model.predict_proba(features_transformed)[0]
+            churn_probability = float(prediction_proba[1])
+            prediction_encoded = int(churn_probability >= self.threshold)
 
             # Decode prediction
             prediction_label = self.label_encoder.inverse_transform([prediction_encoded])[0]
 
-            # Get probability of churn (class 1)
-            churn_probability = float(prediction_proba[1])
             confidence = float(max(prediction_proba))
 
             result = {
@@ -219,9 +228,9 @@ class PredictionPipeline:
             # Transform features
             features_transformed = self.preprocessor.transform(df)
 
-            # Make predictions
-            predictions_encoded = self.model.predict(features_transformed)
+            # Get probabilities and apply tuned threshold
             predictions_proba = self.model.predict_proba(features_transformed)
+            predictions_encoded = (predictions_proba[:, 1] >= self.threshold).astype(int)
 
             # Decode predictions
             predictions_labels = self.label_encoder.inverse_transform(predictions_encoded)

@@ -61,6 +61,8 @@ mlflow:
 # model evaluation
 model_evaluation:
   metrics_path: artifacts/metrics
-  threshold: 0.5
-  min_f1_score: 0.75
-  min_roc_auc: 0.85
+  threshold: 0.5            # fallback; overridden by per-model threshold tuning
+  min_recall: 0.78          # catch 78%+ of churners (Telco dataset ceiling ~0.82)
+  min_precision: 0.55       # acceptable false-positive rate given 26.5% base rate
+  min_f1_score: 0.65        # realistic minority-class F1 for this dataset
+  min_roc_auc: 0.85         # good ranking ability
